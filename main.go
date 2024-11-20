@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/mtslzr/pokeapi-go"
 )
 
 // Struct to represent Pokémon details from PokéAPI
@@ -40,35 +39,12 @@ func main() {
 func getPokemons(c *gin.Context) {
 	fmt.Println("BE getPokemons are called mate")
 	// URL for the PokéAPI
-	url := "https://pokeapi.co/api/v2/pokemon/ditto"
+	pokemons, err := pokeapi.Resource("pokemon",0,151)
 
-	// Perform HTTP GET request
-	resp, err := http.Get(url)
-
-
-	if err != nil {
-		fmt.Println("Error occurred while fetching data:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch data from PokéAPI"})
-		return
-	}
-	defer resp.Body.Close()
-
-	// body, err := ioutil.ReadAll(resp.Body)
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error occurred while reading response:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read API response"})
-		return
+	if (err != nil){
+		panic("failed to fetch pokemons")
 	}
 
-	// Parse the JSON response to validate it
-	var data map[string]interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		fmt.Println("Error occurred while parsing JSON:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse JSON"})
-		return
-	}
 
-	// Return the entire response as JSON
-	c.IndentedJSON(http.StatusOK, data)
+	c.IndentedJSON(http.StatusOK,pokemons)
 }
