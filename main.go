@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
@@ -30,6 +31,8 @@ func main() {
 
 	// Define routes
 	router.GET("/pokemon", getPokemons)
+	router.GET("/pokemon/:pokemonId", getPokemonDetail)
+
 
 	// Start the server
 	router.Run("localhost:8080")
@@ -48,3 +51,27 @@ func getPokemons(c *gin.Context) {
 
 	c.IndentedJSON(http.StatusOK,pokemons)
 }
+
+
+func getPokemonDetail(c *gin.Context){
+	fmt.Println("getPokemonDetail was called")
+	pokemonId, booleanValue := c.Params.Get("pokemonId")
+	
+	if (!booleanValue){
+		log.Fatal("Failed to get pokemonId param")
+	}
+
+	 pokemonDetail, err2 := pokeapi.Pokemon(pokemonId)
+
+	 if (err2 != nil){
+		log.Fatal("Failed to fetch pokemonDetail",err2)
+	 }
+
+
+	 c.IndentedJSON(http.StatusOK, pokemonDetail)
+	 
+	
+}
+
+
+
