@@ -7,11 +7,13 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/Tonipenyallop/pokedex-api/constants"
 	"github.com/Tonipenyallop/pokedex-api/types"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/mtslzr/pokeapi-go"
 )
+
 func main() {
 	// Initialize Gin router
 	router := gin.Default()
@@ -26,6 +28,7 @@ func main() {
 	// Define routes
 	router.GET("/pokemon", getPokemons)
 	router.GET("/pokemon/:pokemonId", getPokemonDetails)
+	router.GET("/pokemon/gen/:generationId", getPokemonDetailsByGeneration)
 
 	// Start the server
 	router.Run("localhost:8080")
@@ -74,6 +77,42 @@ func getPokemonDetails(c *gin.Context) {
 	}
 
 	// Need to wait
+	wg.Wait()
+
+	c.IndentedJSON(http.StatusOK, pokemons)
+
+}
+
+func getPokemonDetailsByGeneration(c *gin.Context) {
+	fmt.Println("getPokemonDetailsByGeneration was called")
+	generationId, booleanValue := c.Params.Get("generationId")
+	if !booleanValue {
+		log.Fatal("Failed to get generationId from Param")
+	}
+	from := constants.GENERATION_MAP[generationId][0]
+	to := constants.GENERATION_MAP[generationId][1]
+	fmt.Println("from", from, "to", to)
+
+	var wg sync.WaitGroup
+
+	var pokemons = make([]types.Pokemon, to-from+1)
+
+	// 1 index
+	for i := from; i <= to; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			pokemon, err := pokeapi.Pokemon(strconv.Itoa(i))
+
+			if err != nil {
+				log.Fatal("Failed to fetch pokemon", err)
+			}
+
+			pokemons[i-from] = types.Pokemon(pokemon)
+
+		}()
+	}
+
 	wg.Wait()
 
 	c.IndentedJSON(http.StatusOK, pokemons)
