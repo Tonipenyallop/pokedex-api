@@ -8,6 +8,8 @@ type PokemonAPIResponse struct {
 }
 
 type Pokemon struct {
+	ID int `json:"id"`
+	Name string `json:"name"`
 	Abilities []struct {
 		Ability struct {
 			Name string `json:"name"`
@@ -34,7 +36,6 @@ type Pokemon struct {
 	} `json:"game_indices"`
 	Height                 int           `json:"height"`
 	HeldItems              []interface{} `json:"held_items"`
-	ID                     int           `json:"id"`
 	IsDefault              bool          `json:"is_default"`
 	LocationAreaEncounters string        `json:"location_area_encounters"`
 	Moves                  []struct {
@@ -54,7 +55,6 @@ type Pokemon struct {
 			} `json:"version_group"`
 		} `json:"version_group_details"`
 	} `json:"moves"`
-	Name    string `json:"name"`
 	Order   int    `json:"order"`
 	Species struct {
 		Name string `json:"name"`
