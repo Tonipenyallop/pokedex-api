@@ -25,7 +25,6 @@ func main() {
 	// and region from the shared configuration file ~/.aws/config.
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
-		// todo use my env file
 		Profile: AWS_PROFILE_NAME,
 	}))
 
