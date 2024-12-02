@@ -51,3 +51,30 @@ type Pokemon struct {
 	Weight int `json:"weight"`
 }
 
+
+type Sprites struct {
+	BackDefault      string      `json:"back_default"`
+	BackFemale       interface{} `json:"back_female"`
+	BackShiny        string      `json:"back_shiny"`
+	BackShinyFemale  interface{} `json:"back_shiny_female"`
+	FrontDefault     string      `json:"front_default"`
+	FrontFemale      interface{} `json:"front_female"`
+	FrontShiny       string      `json:"front_shiny"`
+	FrontShinyFemale interface{} `json:"front_shiny_female"`
+}
+
+type TypeSlot struct {
+	Slot int         `json:"slot"`
+	Type TypeDetails `json:"type"`
+}
+type TypeDetails struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type GetAllPokemonsResponse struct {
+	ID      int        `json:"id"`
+	Name    string     `json:"name"`
+	Sprites Sprites    `json:"sprites"`
+	Types   []TypeSlot `json:"types"`
+}
