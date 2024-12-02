@@ -37,21 +37,21 @@ func main() {
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{
-				AttributeName: aws.String("ID"),
-				AttributeType: aws.String("N"),
-			},
-			{
 				AttributeName: aws.String("Name"),
 				AttributeType: aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("ID"),
+				AttributeType: aws.String("N"),
 			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
-				AttributeName: aws.String("ID"),
+				AttributeName: aws.String("Name"),
 				KeyType:       aws.String("HASH"),
 			},
 			{
-				AttributeName: aws.String("Name"),
+				AttributeName: aws.String("ID"),
 				KeyType:       aws.String("RANGE"),
 			},
 		},
