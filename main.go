@@ -6,13 +6,20 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"sort"
 	"strconv"
 	"sync"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 
 	"github.com/Tonipenyallop/pokedex-api/constants"
 	"github.com/Tonipenyallop/pokedex-api/types"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/mtslzr/pokeapi-go"
 )
 
@@ -29,6 +36,7 @@ func main() {
 
 	// Define routes
 	router.GET("/pokemon", getPokemons)
+	router.GET("/pokemon/all", getAllPokemons)
 	router.GET("/pokemon/:pokemonId", getPokemonDetails)
 	router.GET("/pokemon/gen/:generationId", getPokemonDetailsByGeneration)
 
@@ -45,6 +53,128 @@ func getPokemons(c *gin.Context) {
 	if err != nil {
 		panic("failed to fetch pokemons")
 	}
+
+	c.IndentedJSON(http.StatusOK, pokemons)
+}
+
+type Sprites struct {
+	BackDefault      string      `json:"back_default"`
+	BackFemale       interface{} `json:"back_female"`
+	BackShiny        string      `json:"back_shiny"`
+	BackShinyFemale  interface{} `json:"back_shiny_female"`
+	FrontDefault     string      `json:"front_default"`
+	FrontFemale      interface{} `json:"front_female"`
+	FrontShiny       string      `json:"front_shiny"`
+	FrontShinyFemale interface{} `json:"front_shiny_female"`
+}
+
+type TypeSlot struct {
+	Slot int         `json:"slot"`
+	Type TypeDetails `json:"type"`
+}
+type TypeDetails struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type TmpPokemon struct {
+	ID      int        `json:"id"`
+	Name    string     `json:"name"`
+	Sprites Sprites    `json:"sprites"`
+	Types   []TypeSlot `json:"types"`
+}
+
+func getAllPokemons(c *gin.Context) {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Failed to load env vars")
+		return
+	}
+
+	awsProfile := os.Getenv("AWS_PROFILE_NAME")
+	awsRegion := os.Getenv("AWS_REGION")
+
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Profile: awsProfile,
+		Config:  aws.Config{Region: aws.String(awsRegion)},
+	}))
+
+	svc := dynamodb.New(sess)
+
+	// Use a dynamically growing slice for storing all Pokémons
+	var pokemons []TmpPokemon
+
+	input := &dynamodb.ScanInput{
+		TableName: aws.String("Pokemons"),
+	}
+
+	for {
+		// Perform the Scan operation
+		result, err := svc.Scan(input)
+		if err != nil {
+			log.Fatalf("Failed to scan table: %v", err)
+			return
+		}
+
+		// Process the items in the current batch
+		for _, item := range result.Items {
+			var id int
+			if item["ID"] != nil && item["ID"].N != nil {
+				parsedID, err := strconv.Atoi(*item["ID"].N)
+				if err != nil {
+					log.Printf("Failed to convert ID: %v", err)
+					continue
+				}
+				id = parsedID
+			}
+
+			name := ""
+			if item["Name"] != nil && item["Name"].S != nil {
+				name = *item["Name"].S
+			}
+
+			// Fetch Sprites
+			var sprites Sprites
+			if item["Sprites"] != nil && item["Sprites"].S != nil {
+				err := json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
+				if err != nil {
+					log.Printf("Failed to unmarshal Sprites for ID %d: %v", id, err)
+					continue
+				}
+			}
+
+			// Fetch Types
+			var types []TypeSlot
+			if item["Types"] != nil && item["Types"].S != nil {
+				err := json.Unmarshal([]byte(*item["Types"].S), &types)
+				if err != nil {
+					log.Printf("Failed to unmarshal Types for ID %d: %v", id, err)
+					continue
+				}
+			}
+
+			// Append valid data to the slice
+			pokemons = append(pokemons, TmpPokemon{
+				ID:      id,
+				Name:    name,
+				Sprites: sprites,
+				Types:   types,
+			})
+		}
+
+		// Check if there are more items to fetch
+		if result.LastEvaluatedKey == nil {
+			break // Exit the loop if no more items
+		}
+
+		// Update the Scan input with the LastEvaluatedKey for the next batch
+		input.ExclusiveStartKey = result.LastEvaluatedKey
+	}
+
+	// Sort by ID
+	sort.Slice(pokemons, func(i, j int) bool {
+		return pokemons[i].ID < pokemons[j].ID
+	})
 
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
@@ -144,134 +274,73 @@ func getPokemonDetails(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
 
-// func getPokemonDetails(c *gin.Context) {
-// 	fmt.Println("getPokemonDetail was called")
-// 	pokemonId, booleanValue := c.Params.Get("pokemonId")
-
-// 	if !booleanValue {
-// 		log.Fatal("Failed to get pokemonId param")
-// 		return
-// 	}
-
-// 	isRange := c.Query("isRange")
-
-// 	// want single data. Should rename it!
-// 	if isRange == "true" {
-
-// 		formattedUrl := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", pokemonId)
-
-// 		resp, err := http.Get(formattedUrl)
-// 		if err != nil {
-// 			log.Fatal("Failed to fetch pokemon ditto")
-// 			return
-// 		}
-// 		defer resp.Body.Close()
-
-// 		// maybe not use ioutil.ReadAll?
-// 		body, err := io.ReadAll(resp.Body)
-// 		if err != nil {
-// 			log.Fatalf("Failed to read response body: %v", err)
-// 			return
-// 		}
-
-// 		// Decode JSON
-// 		var pokemon types.Pokemon
-// 		err = json.Unmarshal(body, &pokemon)
-// 		if err != nil {
-// 			log.Fatalf("Error decoding JSON: %v", err)
-// 			return
-// 		}
-
-		
-// 		// retuning single pokemon as an array to match same data type
-// 		tmp := [1]types.Pokemon{}
-// 		// tmp[0] = types.Pokemon(pokemonDetail)
-// 		tmp[0] = types.Pokemon(pokemon)
-// 		// fmt.Println("tmp[0]",tmp[0])
-// 		c.IndentedJSON(http.StatusOK, tmp)
-// 		return
-
-// 	}
-
-// 	convertedId, err := strconv.Atoi(pokemonId)
-// 	if err != nil {
-// 		log.Fatal("Failed to convert string to int")
-// 	}
-
-// 	var wg sync.WaitGroup
-// 	pokemons := make([]types.Pokemon, convertedId)
-// 	// pokemons := make([]types.Pokemon, convertedId)
-
-// 	for i := 0; i < convertedId; i++ {
-// 		wg.Add(1)
-// 		go func() {
-// 			defer wg.Done()
-// 			formattedUrl := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", i + 1)
-			
-// 			pokemonDetail, err2 := http.Get(formattedUrl)
-// 			// pokemonDetail, err2 := pokeapi.Pokemon(strconv.Itoa(i + 1))
-// 			if err2 != nil {
-// 				log.Fatal("Failed to fetch pokemonDetail", err2)
-// 			}
-
-// 			body, err := io.ReadAll(pokemonDetail.Body)
-// 		if err != nil {
-// 			log.Fatalf("Failed to read response body: %v", err)
-// 			return
-// 		}
-
-// 		// Decode JSON
-// 		var pokemon types.Pokemon
-// 		err = json.Unmarshal(body, &pokemon)
-// 		if err != nil {
-// 			log.Fatalf("Error decoding JSON: %v", err)
-// 			return
-// 		}
-
-// 			pokemons[i] = types.Pokemon(pokemon)
-// 		}()
-
-// 	}
-
-// 	// Need to wait
-// 	wg.Wait()
-
-// 	c.IndentedJSON(http.StatusOK, pokemons)
-
-// }
-
 func getPokemonDetailsByGeneration(c *gin.Context) {
 	fmt.Println("getPokemonDetailsByGeneration was called")
-	generationId, booleanValue := c.Params.Get("generationId")
-	if !booleanValue {
-		log.Fatal("Failed to get generationId from Param")
+
+	// Get generationId from URL parameter
+	generationId, found := c.Params.Get("generationId")
+	if !found {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "generationId parameter is required"})
+		return
 	}
-	from := constants.GENERATION_MAP[generationId][0]
-	to := constants.GENERATION_MAP[generationId][1]
+
+	// Fetch the range for the given generation
+	rangeValues, exists := constants.GENERATION_MAP[generationId]
+	if !exists || len(rangeValues) != 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid generationId"})
+		return
+	}
+
+	from, to := rangeValues[0], rangeValues[1]
 	fmt.Println("from", from, "to", to)
+
+	// Pre-allocate slice to hold Pokémon data in order
+	pokemons := make([]types.Pokemon, to-from+1)
 
 	var wg sync.WaitGroup
 
-	var pokemons = make([]types.Pokemon, to-from+1)
+	// Rate-limiting channel for controlled concurrency
+	rateLimiter := make(chan struct{}, 10) // Limit to 10 concurrent requests
 
-	// 1 index
 	for i := from; i <= to; i++ {
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			pokemon, err := pokeapi.Pokemon(strconv.Itoa(i))
+		rateLimiter <- struct{}{} // Acquire a slot
 
+		go func(index int) {
+			defer wg.Done()
+			defer func() { <-rateLimiter }() // Release the slot
+
+			// Fetch Pokémon data using the given endpoint
+			url := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%d", index)
+			resp, err := http.Get(url)
 			if err != nil {
-				log.Fatal("Failed to fetch pokemon", err)
+				fmt.Printf("Failed to fetch Pokémon for ID %d: %v\n", index, err)
+				return
+			}
+			defer resp.Body.Close()
+
+			// Read response body
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Printf("Failed to read response body for ID %d: %v\n", index, err)
+				return
 			}
 
-			pokemons[i-from] = types.Pokemon(pokemon)
+			// Decode JSON
+			var pokemon types.Pokemon
+			err = json.Unmarshal(body, &pokemon)
+			if err != nil {
+				fmt.Printf("Failed to decode JSON for ID %d: %v\n", index, err)
+				return
+			}
 
-		}()
+			// Store in the correct index
+			pokemons[index-from] = pokemon
+		}(i)
 	}
 
+	// Wait for all goroutines to finish
 	wg.Wait()
 
 	c.IndentedJSON(http.StatusOK, pokemons)
-
 }
