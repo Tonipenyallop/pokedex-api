@@ -18,7 +18,6 @@ type Pokemon struct {
 		IsHidden bool `json:"is_hidden"`
 		Slot     int  `json:"slot"`
 	} `json:"abilities"`
-	BaseExperience int `json:"base_experience"`
 	Cries struct{
 		Latest string `json:"latest"`
 		Legacy string `json:"legacy"`
@@ -27,35 +26,7 @@ type Pokemon struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"forms"`
-	GameIndices []struct {
-		GameIndex int `json:"game_index"`
-		Version   struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
-		} `json:"version"`
-	} `json:"game_indices"`
 	Height                 int           `json:"height"`
-	HeldItems              []interface{} `json:"held_items"`
-	IsDefault              bool          `json:"is_default"`
-	LocationAreaEncounters string        `json:"location_area_encounters"`
-	Moves                  []struct {
-		Move struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
-		} `json:"move"`
-		VersionGroupDetails []struct {
-			LevelLearnedAt  int `json:"level_learned_at"`
-			MoveLearnMethod struct {
-				Name string `json:"name"`
-				URL  string `json:"url"`
-			} `json:"move_learn_method"`
-			VersionGroup struct {
-				Name string `json:"name"`
-				URL  string `json:"url"`
-			} `json:"version_group"`
-		} `json:"version_group_details"`
-	} `json:"moves"`
-	Order   int    `json:"order"`
 	Species struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
@@ -70,14 +41,6 @@ type Pokemon struct {
 		FrontShiny       string      `json:"front_shiny"`
 		FrontShinyFemale interface{} `json:"front_shiny_female"`
 	} `json:"sprites"`
-	Stats []struct {
-		BaseStat int `json:"base_stat"`
-		Effort   int `json:"effort"`
-		Stat     struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
-		} `json:"stat"`
-	} `json:"stats"`
 	Types []struct {
 		Slot int `json:"slot"`
 		Type struct {
