@@ -99,40 +99,28 @@ func getAllPokemons(c *gin.Context) {
 
 		// Process the items in the current batch
 		for _, item := range result.Items {
-			var id int
-			if item["ID"] != nil && item["ID"].N != nil {
-				parsedID, err := strconv.Atoi(*item["ID"].N)
-				if err != nil {
-					log.Printf("Failed to convert ID: %v", err)
-					continue
-				}
-				id = parsedID
+
+			id, err := strconv.Atoi(*item["ID"].N)
+			if err != nil {
+				log.Printf("Failed to convert ID: %v", err)
+				continue
 			}
 
-			name := ""
-			if item["Name"] != nil && item["Name"].S != nil {
-				name = *item["Name"].S
-			}
+			name := *item["Name"].S
 
-			// Fetch Sprites
 
 			var sprites types.Sprites
-			if item["Sprites"] != nil && item["Sprites"].S != nil {
-				err := json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
-				if err != nil {
-					log.Printf("Failed to unmarshal Sprites for ID %d: %v", id, err)
-					continue
-				}
+			err = json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
+			if err != nil {
+				log.Printf("Failed to unmarshal Sprites for ID %d: %v", id, err)
+				continue
 			}
-
-			// Fetch Types
+			
 			var types []types.TypeSlot
-			if item["Types"] != nil && item["Types"].S != nil {
-				err := json.Unmarshal([]byte(*item["Types"].S), &types)
-				if err != nil {
-					log.Printf("Failed to unmarshal Types for ID %d: %v", id, err)
-					continue
-				}
+			err = json.Unmarshal([]byte(*item["Types"].S), &types)
+			if err != nil {
+				log.Printf("Failed to unmarshal Types for ID %d: %v", id, err)
+				continue
 			}
 
 			pokemons = append(pokemons, TmpPokemon{
