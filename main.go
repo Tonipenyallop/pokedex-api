@@ -57,31 +57,12 @@ func getPokemons(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
 
-type Sprites struct {
-	BackDefault      string      `json:"back_default"`
-	BackFemale       interface{} `json:"back_female"`
-	BackShiny        string      `json:"back_shiny"`
-	BackShinyFemale  interface{} `json:"back_shiny_female"`
-	FrontDefault     string      `json:"front_default"`
-	FrontFemale      interface{} `json:"front_female"`
-	FrontShiny       string      `json:"front_shiny"`
-	FrontShinyFemale interface{} `json:"front_shiny_female"`
-}
-
-type TypeSlot struct {
-	Slot int         `json:"slot"`
-	Type TypeDetails `json:"type"`
-}
-type TypeDetails struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
-
+// somehow cannot use GetAllPokemonsResponse
 type TmpPokemon struct {
-	ID      int        `json:"id"`
-	Name    string     `json:"name"`
-	Sprites Sprites    `json:"sprites"`
-	Types   []TypeSlot `json:"types"`
+	ID      int              `json:"id"`
+	Name    string           `json:"name"`
+	Sprites types.Sprites    `json:"sprites"`
+	Types   []types.TypeSlot `json:"types"`
 }
 
 func getAllPokemons(c *gin.Context) {
@@ -134,7 +115,8 @@ func getAllPokemons(c *gin.Context) {
 			}
 
 			// Fetch Sprites
-			var sprites Sprites
+
+			var sprites types.Sprites
 			if item["Sprites"] != nil && item["Sprites"].S != nil {
 				err := json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
 				if err != nil {
@@ -144,7 +126,7 @@ func getAllPokemons(c *gin.Context) {
 			}
 
 			// Fetch Types
-			var types []TypeSlot
+			var types []types.TypeSlot
 			if item["Types"] != nil && item["Types"].S != nil {
 				err := json.Unmarshal([]byte(*item["Types"].S), &types)
 				if err != nil {
@@ -153,13 +135,13 @@ func getAllPokemons(c *gin.Context) {
 				}
 			}
 
-			// Append valid data to the slice
 			pokemons = append(pokemons, TmpPokemon{
 				ID:      id,
 				Name:    name,
 				Sprites: sprites,
 				Types:   types,
 			})
+
 		}
 
 		// Check if there are more items to fetch
