@@ -10,11 +10,9 @@ import (
 
 	pokemonService "github.com/Tonipenyallop/pokedex-api/services"
 
-	"github.com/Tonipenyallop/pokedex-api/constants"
 	"github.com/Tonipenyallop/pokedex-api/types"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/mtslzr/pokeapi-go"
 )
 
 func main() {
@@ -29,36 +27,19 @@ func main() {
 	}))
 
 	// Define routes
-	router.GET("/pokemon", getPokemons)
 	router.GET("/pokemon/all", getAllPokemons)
 	router.GET("/pokemon/:pokemonId", getPokemonDetails)
-	router.GET("/pokemon/gen/:generationId", getPokemonDetailsByGeneration)
+	router.GET("/pokemon/gen/:generationId", getPokemonsByGen)
 
 	// Start the server
 	router.Run("localhost:8080")
 }
 
-// Function to fetch Pokémon data and return JSON
-func getPokemons(c *gin.Context) {
-	fmt.Println("BE getPokemons are called mate")
-	// URL for the PokéAPI
-	pokemons, err := pokeapi.Resource("pokemon", 0, 151)
-
-	if err != nil {
-		panic("failed to fetch pokemons")
-	}
-
-	c.IndentedJSON(http.StatusOK, pokemons)
-}
-
-
-
-
 func getAllPokemons(c *gin.Context) {
 	pokemons, err := pokemonService.GetAllPokemons()
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError,err)
-		return 
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		return
 	}
 
 	c.IndentedJSON(http.StatusOK, pokemons)
@@ -159,73 +140,22 @@ func getPokemonDetails(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
 
-func getPokemonDetailsByGeneration(c *gin.Context) {
-	fmt.Println("getPokemonDetailsByGeneration was called")
+func getPokemonsByGen(c *gin.Context) {
 
-	// Get generationId from URL parameter
+
+	// // Get generationId from URL parameter
 	generationId, found := c.Params.Get("generationId")
 	if !found {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "generationId parameter is required"})
 		return
 	}
 
-	// Fetch the range for the given generation
-	rangeValues, exists := constants.GENERATION_MAP[generationId]
-	if !exists || len(rangeValues) != 2 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid generationId"})
+
+	pokemons, err := pokemonService.GetPokemonsByGen(generationId)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
 		return
 	}
-
-	from, to := rangeValues[0], rangeValues[1]
-	fmt.Println("from", from, "to", to)
-
-	// Pre-allocate slice to hold Pokémon data in order
-	pokemons := make([]types.Pokemon, to-from+1)
-
-	var wg sync.WaitGroup
-
-	// Rate-limiting channel for controlled concurrency
-	rateLimiter := make(chan struct{}, 10) // Limit to 10 concurrent requests
-
-	for i := from; i <= to; i++ {
-		wg.Add(1)
-		rateLimiter <- struct{}{} // Acquire a slot
-
-		go func(index int) {
-			defer wg.Done()
-			defer func() { <-rateLimiter }() // Release the slot
-
-			// Fetch Pokémon data using the given endpoint
-			url := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%d", index)
-			resp, err := http.Get(url)
-			if err != nil {
-				fmt.Printf("Failed to fetch Pokémon for ID %d: %v\n", index, err)
-				return
-			}
-			defer resp.Body.Close()
-
-			// Read response body
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				fmt.Printf("Failed to read response body for ID %d: %v\n", index, err)
-				return
-			}
-
-			// Decode JSON
-			var pokemon types.Pokemon
-			err = json.Unmarshal(body, &pokemon)
-			if err != nil {
-				fmt.Printf("Failed to decode JSON for ID %d: %v\n", index, err)
-				return
-			}
-
-			// Store in the correct index
-			pokemons[index-from] = pokemon
-		}(i)
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
 
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
