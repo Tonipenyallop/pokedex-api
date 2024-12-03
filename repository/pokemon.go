@@ -20,12 +20,11 @@ type TmpPokemon struct {
 	Types   []types.TypeSlot `json:"types"`
 }
 
-
-func GetAllPokemons ()([]TmpPokemon, error){
+func GetAllPokemons() ([]TmpPokemon, error) {
 
 	svc, err := pokemonDynamo.GetDynamo()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get dynamo:",err)
+		return nil, fmt.Errorf("Failed to get dynamo:", err)
 	}
 
 	// Use a dynamically growing slice for storing all Pokémons
@@ -53,14 +52,13 @@ func GetAllPokemons ()([]TmpPokemon, error){
 
 			name := *item["Name"].S
 
-
 			var sprites types.Sprites
 			err = json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
 			if err != nil {
 				log.Printf("Failed to unmarshal Sprites for ID %d: %v", id, err)
 				continue
 			}
-			
+
 			var types []types.TypeSlot
 			err = json.Unmarshal([]byte(*item["Types"].S), &types)
 			if err != nil {
@@ -88,3 +86,77 @@ func GetAllPokemons ()([]TmpPokemon, error){
 	return pokemons, nil
 }
 
+
+
+func GetPokemonsByGen(genId string) ([]TmpPokemon, error) {
+
+
+	// Initialize DynamoDB client
+	svc, err := pokemonDynamo.GetDynamo()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get DynamoDB client: %w", err)
+	}
+
+
+	// Define Scan input
+	input := &dynamodb.ScanInput{
+		TableName:        aws.String("Pokemons"),
+		FilterExpression: aws.String("Generation = :gen"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":gen": {S: aws.String(genId)},
+		},
+	}
+
+
+	var pokemons []TmpPokemon
+	// Execute Scan
+
+	for {
+		res, err := svc.Scan(input)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to scan DynamoDB: %w", err)
+		}
+
+		for _, item := range res.Items {
+
+			id, err := strconv.Atoi(*item["ID"].N)
+			if err != nil {
+				log.Printf("Failed to convert ID: %v", err)
+				continue
+			}
+
+			name := *item["Name"].S
+
+			var sprites types.Sprites
+			err = json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
+			if err != nil {
+				log.Printf("Failed to unmarshal Sprites for ID %d: %v", id, err)
+				continue
+			}
+
+			var types []types.TypeSlot
+			err = json.Unmarshal([]byte(*item["Types"].S), &types)
+			if err != nil {
+				log.Printf("Failed to unmarshal Types for ID %d: %v", id, err)
+				continue
+			}
+
+
+			pokemons = append(pokemons, TmpPokemon{
+				ID:      id,
+				Name:    name,
+				Sprites: sprites,
+				Types:   types,
+			})
+		}
+		// Check if there are more items to fetch
+		if res.LastEvaluatedKey == nil {
+			break // Exit the loop if no more items
+		}
+
+		// Update the Scan input with the LastEvaluatedKey for the next batch
+		input.ExclusiveStartKey = res.LastEvaluatedKey
+	}
+
+	return pokemons, nil
+}
