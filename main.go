@@ -4,22 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
-	"sort"
 	"strconv"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	pokemonService "github.com/Tonipenyallop/pokedex-api/services"
 
 	"github.com/Tonipenyallop/pokedex-api/constants"
 	"github.com/Tonipenyallop/pokedex-api/types"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/mtslzr/pokeapi-go"
 )
 
@@ -57,94 +51,15 @@ func getPokemons(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
 
-// somehow cannot use GetAllPokemonsResponse
-type TmpPokemon struct {
-	ID      int              `json:"id"`
-	Name    string           `json:"name"`
-	Sprites types.Sprites    `json:"sprites"`
-	Types   []types.TypeSlot `json:"types"`
-}
+
+
 
 func getAllPokemons(c *gin.Context) {
-	err := godotenv.Load()
+	pokemons, err := pokemonService.GetAllPokemons()
 	if err != nil {
-		log.Fatal("Failed to load env vars")
-		return
+		c.IndentedJSON(http.StatusInternalServerError,err)
+		return 
 	}
-
-	awsProfile := os.Getenv("AWS_PROFILE_NAME")
-	awsRegion := os.Getenv("AWS_REGION")
-
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Profile: awsProfile,
-		Config:  aws.Config{Region: aws.String(awsRegion)},
-	}))
-
-	svc := dynamodb.New(sess)
-
-	// Use a dynamically growing slice for storing all Pokémons
-	var pokemons []TmpPokemon
-
-	input := &dynamodb.ScanInput{
-		TableName: aws.String("Pokemons"),
-	}
-
-	for {
-		// Perform the Scan operation
-		result, err := svc.Scan(input)
-		if err != nil {
-			log.Fatalf("Failed to scan table: %v", err)
-			return
-		}
-
-		// Process the items in the current batch
-		for _, item := range result.Items {
-
-			id, err := strconv.Atoi(*item["ID"].N)
-			if err != nil {
-				log.Printf("Failed to convert ID: %v", err)
-				continue
-			}
-
-			name := *item["Name"].S
-
-
-			var sprites types.Sprites
-			err = json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
-			if err != nil {
-				log.Printf("Failed to unmarshal Sprites for ID %d: %v", id, err)
-				continue
-			}
-			
-			var types []types.TypeSlot
-			err = json.Unmarshal([]byte(*item["Types"].S), &types)
-			if err != nil {
-				log.Printf("Failed to unmarshal Types for ID %d: %v", id, err)
-				continue
-			}
-
-			pokemons = append(pokemons, TmpPokemon{
-				ID:      id,
-				Name:    name,
-				Sprites: sprites,
-				Types:   types,
-			})
-
-		}
-
-		// Check if there are more items to fetch
-		if result.LastEvaluatedKey == nil {
-			break // Exit the loop if no more items
-		}
-
-		// Update the Scan input with the LastEvaluatedKey for the next batch
-		input.ExclusiveStartKey = result.LastEvaluatedKey
-	}
-
-	// Sort by ID
-	sort.Slice(pokemons, func(i, j int) bool {
-		return pokemons[i].ID < pokemons[j].ID
-	})
 
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
