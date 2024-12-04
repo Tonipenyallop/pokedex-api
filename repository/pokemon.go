@@ -18,6 +18,7 @@ type TmpPokemon struct {
 	Name    string           `json:"name"`
 	Sprites types.Sprites    `json:"sprites"`
 	Types   []types.TypeSlot `json:"types"`
+	Generation   string `json:"generation"`
 }
 
 func GetAllPokemons() ([]TmpPokemon, error) {
@@ -52,6 +53,8 @@ func GetAllPokemons() ([]TmpPokemon, error) {
 
 			name := *item["Name"].S
 
+			generation:= *item["Generation"].S
+
 			var sprites types.Sprites
 			err = json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
 			if err != nil {
@@ -71,6 +74,7 @@ func GetAllPokemons() ([]TmpPokemon, error) {
 				Name:    name,
 				Sprites: sprites,
 				Types:   types,
+				Generation: generation,
 			})
 
 		}
@@ -127,6 +131,8 @@ func GetPokemonsByGen(genId string) ([]TmpPokemon, error) {
 
 			name := *item["Name"].S
 
+			generation:= *item["Generation"].S
+
 			var sprites types.Sprites
 			err = json.Unmarshal([]byte(*item["Sprites"].S), &sprites)
 			if err != nil {
@@ -147,6 +153,7 @@ func GetPokemonsByGen(genId string) ([]TmpPokemon, error) {
 				Name:    name,
 				Sprites: sprites,
 				Types:   types,
+				Generation: generation,
 			})
 		}
 		// Check if there are more items to fetch
