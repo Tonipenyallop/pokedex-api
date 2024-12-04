@@ -15,7 +15,7 @@ var pokemonCache = cache.New(24*time.Hour, 24*time.Hour) // Shared cache instanc
 
 func GetAllPokemons() ([]pokemonRepository.TmpPokemon, error) {
 	// Check cache
-	cachedPokemon := getPokemonsFromCache()
+	cachedPokemon := getAllPokemonsFromCache()
 	if cachedPokemon != nil {
 		return cachedPokemon, nil
 	}
@@ -30,14 +30,16 @@ func GetAllPokemons() ([]pokemonRepository.TmpPokemon, error) {
 	sort.Slice(pokemons, func(i, j int) bool {
 		return pokemons[i].ID < pokemons[j].ID
 	})
+
+	// store cache for All pokemons
 	pokemonCache.Set(POKEMON_CACHE_KEY, pokemons, 24*time.Hour)
 
 	return pokemons, nil
 }
 
 func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
-	// Check cache
-	cachedPokemon := getPokemonsFromCache()
+	// Check cache for all pokemons
+	cachedPokemon := getAllPokemonsFromCache()
 	var pokemonArr []pokemonRepository.TmpPokemon
 	if cachedPokemon != nil {
 
@@ -50,6 +52,12 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 		return pokemonArr, nil
 	}
 
+	// Check cache for generation pokemons
+	cachedGenPokemons := getPokemonsFromCacheByGen(genId)
+	if cachedGenPokemons != nil {
+		return cachedGenPokemons, nil
+	}
+
 	// Fetch from repository
 	pokemons, err := pokemonRepository.GetPokemonsByGen(genId)
 	if err != nil {
@@ -60,13 +68,28 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 	sort.Slice(pokemons, func(i, j int) bool {
 		return pokemons[i].ID < pokemons[j].ID
 	})
-	pokemonCache.Set(POKEMON_CACHE_KEY, pokemons, 24*time.Hour)
+
+	// store cache for generation
+	genCacheKey := fmt.Sprintf("%s%s%s", POKEMON_CACHE_KEY, '_', genId)
+	pokemonCache.Set(genCacheKey, pokemons, 24*time.Hour)
 
 	return pokemons, nil
 }
 
-func getPokemonsFromCache() []pokemonRepository.TmpPokemon {
+func getAllPokemonsFromCache() []pokemonRepository.TmpPokemon {
 	pokemonInCache, found := pokemonCache.Get(POKEMON_CACHE_KEY)
+	if found {
+		if cachedPokemon, ok := pokemonInCache.([]pokemonRepository.TmpPokemon); ok {
+			return cachedPokemon
+		}
+	}
+	return nil
+}
+
+func getPokemonsFromCacheByGen(genId string) []pokemonRepository.TmpPokemon {
+	genCacheKey := fmt.Sprintf("%s%s%s", POKEMON_CACHE_KEY, '_', genId)
+
+	pokemonInCache, found := pokemonCache.Get(genCacheKey)
 	if found {
 		if cachedPokemon, ok := pokemonInCache.([]pokemonRepository.TmpPokemon); ok {
 			return cachedPokemon
