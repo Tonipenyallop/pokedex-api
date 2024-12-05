@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	serviceHelper "github.com/Tonipenyallop/pokedex-api/helpers"
+	pokemonServiceHelper "github.com/Tonipenyallop/pokedex-api/helpers"
 	pokemonRepository "github.com/Tonipenyallop/pokedex-api/repository"
 	"github.com/patrickmn/go-cache"
 )
@@ -21,7 +21,7 @@ func TestGetPokemonsFromCacheByGen(t *testing.T) {
 
 	genId := "first"
 
-	cacheKey := serviceHelper.GetGenCacheKey(genId)
+	cacheKey := pokemonServiceHelper.GetGenCacheKey(genId)
 
 	type FakePokemon struct {
 		ID   string
@@ -37,7 +37,7 @@ func TestGetPokemonsFromCacheByGen(t *testing.T) {
 
 	pokemonCache.Set(cacheKey, pokemons, 24*time.Hour)
 
-	res := serviceHelper.GetPokemonsFromCacheByGen(genId, pokemonCache)
+	res := pokemonServiceHelper.GetPokemonsFromCacheByGen(genId, pokemonCache)
 	fmt.Println("reflect.DeepEqual(res,pokemons)", reflect.DeepEqual(res, pokemons))
 	if !reflect.DeepEqual(res, pokemons) {
 		t.Fatalf("expect res: and pokemons: to be same")
@@ -65,7 +65,7 @@ func TestGetGenIdByPokemonId(t *testing.T){
     }
 
     for _, testCase := range testCases{
-        res := serviceHelper.GetGenIdByPokemonId(testCase.pokemonId)
+        res := pokemonServiceHelper.GetGenIdByPokemonId(testCase.pokemonId)
 
         if res != testCase.expect{
             t.Fatalf("expect %s to be %s",res,testCase.expect)
