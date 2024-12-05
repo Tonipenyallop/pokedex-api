@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	pokemonService "github.com/Tonipenyallop/pokedex-api/services"
 
-	"github.com/Tonipenyallop/pokedex-api/types"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +25,8 @@ func main() {
 	router.GET("/pokemon/all", getAllPokemons)
 	router.GET("/pokemon/:pokemonId", getPokemonDetails)
 	router.GET("/pokemon/gen/:generationId", getPokemonsByGen)
+	// router.GET("/pokemon/evolution-chain/:pokemonId", getEvolutionChainById)
+	router.GET("/pokemon/evolution-chain/:pokemonId", getPokemonFlavorTextAndEvolutionChain)
 
 	// Start the server
 	router.Run("localhost:8080")
@@ -51,36 +50,16 @@ func getPokemonDetails(c *gin.Context) {
 		return
 	}
 
+	pokemon, err := pokemonService.GetPokemonDetail(pokemonId)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"Error": fmt.Sprintf("Failed to fetch pokemon detail %s", err)})
+	}
 
-		formattedUrl := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", pokemonId)
+	c.IndentedJSON(http.StatusOK, pokemon)
 
-		resp, err := http.Get(formattedUrl)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch Pokemon details"})
-			return
-		}
-		defer resp.Body.Close()
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response body"})
-			return
-		}
-
-		var pokemon types.Pokemon
-		err = json.Unmarshal(body, &pokemon)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode JSON"})
-			return
-		}
-
-		// Return single Pokemon as an array for consistency
-		c.IndentedJSON(http.StatusOK, pokemon)
-	
 }
 
 func getPokemonsByGen(c *gin.Context) {
-
 
 	// // Get generationId from URL parameter
 	generationId, found := c.Params.Get("generationId")
@@ -88,7 +67,6 @@ func getPokemonsByGen(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "generationId parameter is required"})
 		return
 	}
-
 
 	pokemons, err := pokemonService.GetPokemonsByGen(generationId)
 	if err != nil {
@@ -99,4 +77,37 @@ func getPokemonsByGen(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
 
+// this method will return up to 3 pokemons of array
+// func getEvolutionChainById(c *gin.Context){
+// 	pokemonId, found := c.Params.Get("pokemonId")
 
+// 	if !found {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error" : "pokemonId param is required"})
+// 	}
+
+// 	evolutionChain, err := pokemonService.GetEvolutionChainById(pokemonId)
+
+// 	if err != nil {
+// 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error" : fmt.Sprint("failed to get evolution chain with id:%s %s",pokemonId,err)})
+// 	}
+
+// 	c.IndentedJSON(http.StatusOK, evolutionChain)
+
+// }
+
+func getPokemonFlavorTextAndEvolutionChain(c *gin.Context) {
+	pokemonId, found := c.Params.Get("pokemonId")
+
+	if !found {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "pokemonId param is required"})
+	}
+
+	evolutionChain, err := pokemonService.GetPokemonFlavorTextAndEvolutionChain(pokemonId)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprint("failed to get evolution chain with id:", err)})
+	}
+
+	c.IndentedJSON(http.StatusOK, evolutionChain)
+
+}
