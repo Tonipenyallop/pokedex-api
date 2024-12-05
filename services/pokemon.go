@@ -3,9 +3,12 @@ package pokemonService
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
+	pokemonServiceHelper "github.com/Tonipenyallop/pokedex-api/helpers"
 	pokemonRepository "github.com/Tonipenyallop/pokedex-api/repository"
+	"github.com/Tonipenyallop/pokedex-api/types"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -15,7 +18,7 @@ var pokemonCache = cache.New(24*time.Hour, 24*time.Hour) // Shared cache instanc
 
 func GetAllPokemons() ([]pokemonRepository.TmpPokemon, error) {
 	// Check cache
-	cachedPokemon := getAllPokemonsFromCache()
+	cachedPokemon := pokemonServiceHelper.GetAllPokemonsFromCache(pokemonCache)
 	if cachedPokemon != nil {
 		return cachedPokemon, nil
 	}
@@ -38,8 +41,15 @@ func GetAllPokemons() ([]pokemonRepository.TmpPokemon, error) {
 }
 
 func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
+	// Check cache for generation pokemons
+	cachedGenPokemons := pokemonServiceHelper.GetPokemonsFromCacheByGen(genId, pokemonCache)
+
+	if cachedGenPokemons != nil {
+		return cachedGenPokemons, nil
+	}
+
 	// Check cache for all pokemons
-	cachedPokemon := getAllPokemonsFromCache()
+	cachedPokemon := pokemonServiceHelper.GetAllPokemonsFromCache(pokemonCache)
 	var pokemonArr []pokemonRepository.TmpPokemon
 	if cachedPokemon != nil {
 
@@ -50,12 +60,6 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 			}
 		}
 		return pokemonArr, nil
-	}
-
-	// Check cache for generation pokemons
-	cachedGenPokemons := getPokemonsFromCacheByGen(genId)
-	if cachedGenPokemons != nil {
-		return cachedGenPokemons, nil
 	}
 
 	// Fetch from repository
@@ -70,30 +74,88 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 	})
 
 	// store cache for generation
-	genCacheKey := fmt.Sprintf("%s%s%s", POKEMON_CACHE_KEY, '_', genId)
+	genCacheKey := pokemonServiceHelper.GetGenCacheKey(genId)
 	pokemonCache.Set(genCacheKey, pokemons, 24*time.Hour)
 
 	return pokemons, nil
 }
 
-func getAllPokemonsFromCache() []pokemonRepository.TmpPokemon {
-	pokemonInCache, found := pokemonCache.Get(POKEMON_CACHE_KEY)
-	if found {
-		if cachedPokemon, ok := pokemonInCache.([]pokemonRepository.TmpPokemon); ok {
-			return cachedPokemon
-		}
+// func GetEvolutionChainById(pokemonId string) (*types.EvolutionChain, error) {
+
+// 	evolutionChain, err := pokemonRepository.GetEvolutionChainById(pokemonId)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("Failed to get evolution chain")
+// 	}
+
+// 	return evolutionChain, nil
+
+// }
+
+// get flavor text and evolution_chain
+
+func GetPokemonFlavorTextAndEvolutionChain(pokemonId string) (*types.SpeciesInfo, error) {
+	flavorText, err := pokemonRepository.GetPokemonFlavorTextAndEvolutionChain(pokemonId)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get flavor text")
 	}
-	return nil
+
+	tmp, err := pokemonRepository.GetEvolutionChain(flavorText.EvolutionChain.URL)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to fetch evolution chain detail")
+	}
+	fmt.Println("tmp", tmp)
+
+	// evolutionChain, err := pokemonRepository.GetEvolutionChainById(pokemonId)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Failed to get evolution chain")
+	// }
+
+	// [types.SpeciesInfo, ]
+
+	return flavorText, nil
+
 }
 
-func getPokemonsFromCacheByGen(genId string) []pokemonRepository.TmpPokemon {
-	genCacheKey := fmt.Sprintf("%s%s%s", POKEMON_CACHE_KEY, '_', genId)
+func GetPokemonDetail(pokemonId string) (*pokemonRepository.TmpPokemon, error) {
+	convertedPokemonId, err := strconv.Atoi(pokemonId)
 
-	pokemonInCache, found := pokemonCache.Get(genCacheKey)
-	if found {
-		if cachedPokemon, ok := pokemonInCache.([]pokemonRepository.TmpPokemon); ok {
-			return cachedPokemon
+	// check gen cache first
+	genId := pokemonServiceHelper.GetGenIdByPokemonId(convertedPokemonId)
+
+	// get pokemon from gen cache
+	genPokemonsInCache := pokemonServiceHelper.GetPokemonsFromCacheByGen(genId, pokemonCache)
+
+	if genPokemonsInCache != nil {
+		for _, pokemonInCache := range genPokemonsInCache {
+			if pokemonInCache.ID == convertedPokemonId {
+				pokemon := pokemonRepository.TmpPokemon(pokemonInCache)
+				fmt.Println("pokemon found it!", pokemon)
+				return &pokemon, nil
+			}
+		}
+
+	}
+
+	// check all gen cache
+	allPokemonsInCache := pokemonServiceHelper.GetAllPokemonsFromCache(pokemonCache)
+
+	
+	if allPokemonsInCache != nil {
+		for _, pokemonInCache := range allPokemonsInCache {
+			if pokemonInCache.ID == convertedPokemonId {
+				pokemon := pokemonRepository.TmpPokemon(pokemonInCache)
+				return &pokemon, nil
+			}
 		}
 	}
-	return nil
+
+	pokemon, err := pokemonRepository.GetPokemonDetail(pokemonId)
+
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get pokemon detail", err)
+	}
+
+	return pokemon, nil
+
 }
