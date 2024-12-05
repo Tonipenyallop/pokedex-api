@@ -3,7 +3,9 @@ package pokemonRepository
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strconv"
 
 	pokemonDynamo "github.com/Tonipenyallop/pokedex-api/database/dynamo"
@@ -19,6 +21,10 @@ type TmpPokemon struct {
 	Sprites types.Sprites    `json:"sprites"`
 	Types   []types.TypeSlot `json:"types"`
 	Generation   string `json:"generation"`
+	Cries struct{
+		Latest string `json:"latest"`
+		Legacy string `json:"legacy"`
+	} `json:"cries"`
 }
 
 func GetAllPokemons() ([]TmpPokemon, error) {
@@ -119,23 +125,142 @@ func convertPokemonPropsFromAWS(items []map[string]*dynamodb.AttributeValue, arr
 			continue
 		}
 
-		var types []types.TypeSlot
-		err = json.Unmarshal([]byte(*item["Types"].S), &types)
+		
+		// types collision to native name
+		var typeVar []types.TypeSlot
+		err = json.Unmarshal([]byte(*item["Types"].S), &typeVar)
 		if err != nil {
 			log.Printf("Failed to unmarshal Types for ID %d: %v", id, err)
 			continue
 		}
 
+
+		var cries types.Cries
+		err = json.Unmarshal([]byte(*item["Cries"].S), &cries)
+		if err != nil {
+			log.Printf("Failed to unmarshal Cries for ID %d: %v", id, err)
+			continue
+		}
+
+
 		array = append(array, TmpPokemon{
 			ID:      id,
 			Name:    name,
 			Sprites: sprites,
-			Types:   types,
+			Types:   typeVar,
 			Generation: generation,
+			Cries: cries,
 		})
 	}
 
 	return array
 
 
+}
+
+
+type RevolutionChain struct {
+
+}
+
+// get from pokemon species
+// seems like an ID of endpoint is not corresponding to pokemon ID
+func GetEvolutionChain(url string)(*types.EvolutionChain, error){
+	// url := fmt.Sprintf("https://pokeapi.co/api/v2/evolution-chain/%s", pokemonId)
+	fmt.Println("url hehe",url)
+	res, err :=  http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch evolution chain",err)
+	}
+
+	defer res.Body.Close()
+
+
+	body, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to read all body",err)
+	}
+
+
+	var evolutionChain types.EvolutionChain
+
+	err = json.Unmarshal(body,&evolutionChain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal body",err)
+	}
+
+
+	// input is pokemon name 
+	// return up to 3 pokemons name
+
+	// tomp.chain.species.name -> baby pokemon
+	// tomp.chain.evolves_to[0].species.name -> keep going
+
+
+
+
+	// need to decode it
+
+	// fmt.Println("body",body)
+	// pokemons := []TmpPokemon{}
+	return &evolutionChain , nil
+
+}
+
+
+func GetPokemonFlavorTextAndEvolutionChain(pokemonId string)(*types.SpeciesInfo,error) {
+	url := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon-species/%s", pokemonId)
+
+	res, err :=  http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch evolution chain",err)
+	}
+
+	defer res.Body.Close()	
+
+
+	body, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to read all body",err)
+	}
+
+
+	var speciesInfo types.SpeciesInfo
+
+	err = json.Unmarshal(body,&speciesInfo)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal body",err)
+	}
+
+	return &speciesInfo, nil
+
+}
+
+
+func GetPokemonDetail(pokemonId string)(*TmpPokemon, error){
+	fmt.Println("repository was called amte")
+	formattedUrl := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", pokemonId)
+
+	resp, err := http.Get(formattedUrl)
+	if err != nil { 
+		return nil, fmt.Errorf("Failed to fetch Pokemon details",err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil { 
+		return nil, fmt.Errorf("Failed to read response body",err)
+	}
+
+	var pokemon TmpPokemon
+	err = json.Unmarshal(body, &pokemon)
+	if err != nil { 
+		return nil, fmt.Errorf("Failed to decode JSON",err)
+	}	
+
+
+	return &pokemon, nil
 }
