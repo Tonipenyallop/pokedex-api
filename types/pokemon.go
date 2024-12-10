@@ -86,45 +86,60 @@ type GenID string
 
 
 type EvolutionChain struct {
-    BabyTriggerItem interface{} `json:"baby_trigger_item"` // If this is always null, can keep as interface{} or change it to a specific type.
+    BabyTriggerItem interface{} `json:"baby_trigger_item"`
     Chain           Chain       `json:"chain"`
     ID              int         `json:"id"`
 }
 
 type Chain struct {
-    EvolutionDetails []EvolutionDetails `json:"evolution_details"`
-    EvolvesTo        []Chain            `json:"evolves_to"`
-    IsBaby           bool               `json:"is_baby"`
-    Species          Species            `json:"species"`
+    EvolutionDetails []EvolutionDetail `json:"evolution_details"`
+    EvolvesTo        []Chain           `json:"evolves_to"`
+    IsBaby           bool              `json:"is_baby"`
+    Species          Species           `json:"species"`
 }
 
-type EvolutionDetails struct {
-    Gender                *int     `json:"gender"` // Nullable fields can use pointers.
-    HeldItem              *string  `json:"held_item"`
-    Item                  *string  `json:"item"`
-    KnownMove             *string  `json:"known_move"`
-    KnownMoveType         *string  `json:"known_move_type"`
-    Location              *string  `json:"location"`
-    MinAffection          *int     `json:"min_affection"`
-    MinBeauty             *int     `json:"min_beauty"`
-    MinHappiness          *int     `json:"min_happiness"`
-    MinLevel              *int     `json:"min_level"`
-    NeedsOverworldRain    bool     `json:"needs_overworld_rain"`
-    PartySpecies          *string  `json:"party_species"`
-    PartyType             *string  `json:"party_type"`
-    RelativePhysicalStats *int     `json:"relative_physical_stats"`
-    TimeOfDay             string   `json:"time_of_day"`
-    TradeSpecies          *string  `json:"trade_species"`
-    Trigger               Trigger  `json:"trigger"`
-    TurnUpsideDown        bool     `json:"turn_upside_down"`
+type EvolutionDetail struct {
+    Gender                interface{} `json:"gender"`
+    HeldItem              interface{} `json:"held_item"`
+    Item                  *Item       `json:"item"`
+    KnownMove             interface{} `json:"known_move"`
+    KnownMoveType         *Type       `json:"known_move_type"`
+    Location              *Location   `json:"location"`
+    MinAffection          interface{} `json:"min_affection"`
+    MinBeauty             interface{} `json:"min_beauty"`
+    MinHappiness          interface{} `json:"min_happiness"`
+    MinLevel              interface{} `json:"min_level"`
+    NeedsOverworldRain    bool        `json:"needs_overworld_rain"`
+    PartySpecies          interface{} `json:"party_species"`
+    PartyType             interface{} `json:"party_type"`
+    RelativePhysicalStats interface{} `json:"relative_physical_stats"`
+    TimeOfDay             string      `json:"time_of_day"`
+    TradeSpecies          interface{} `json:"trade_species"`
+    Trigger               Trigger     `json:"trigger"`
+    TurnUpsideDown        bool        `json:"turn_upside_down"`
 }
 
-type Trigger struct {
+type Species struct {
     Name string `json:"name"`
     URL  string `json:"url"`
 }
 
-type Species struct {
+type Item struct {
+    Name string `json:"name"`
+    URL  string `json:"url"`
+}
+
+type Type struct {
+    Name string `json:"name"`
+    URL  string `json:"url"`
+}
+
+type Location struct {
+    Name string `json:"name"`
+    URL  string `json:"url"`
+}
+
+type Trigger struct {
     Name string `json:"name"`
     URL  string `json:"url"`
 }
@@ -201,4 +216,15 @@ type PokedexNumber struct {
 type Variety struct {
 	IsDefault bool       `json:"is_default"`
 	Pokemon   NameAndURL `json:"pokemon"`
+}
+
+
+type Cries struct{
+	Latest string `json:"latest"`
+	Legacy string `json:"legacy"`
+} 
+
+type YoutubeMusic struct {
+		Name      string `json:name`
+		StartTime string `json:startTime`
 }
