@@ -2,12 +2,21 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
+	pokemonServiceHelper "github.com/Tonipenyallop/pokedex-api/helpers"
 	pokemonService "github.com/Tonipenyallop/pokedex-api/services"
+	"github.com/Tonipenyallop/pokedex-api/types"
+
+	"context"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"google.golang.org/api/option"
+	"google.golang.org/api/youtube/v3"
 )
 
 func main() {
@@ -27,10 +36,52 @@ func main() {
 	router.GET("/pokemon/gen/:generationId", getPokemonsByGen)
 	// router.GET("/pokemon/evolution-chain/:pokemonId", getEvolutionChainById)
 	router.GET("/pokemon/evolution-chain/:pokemonId", getPokemonFlavorTextAndEvolutionChain)
+	router.GET("/pokemon/music", tmpMusic)
 
 	// Start the server
 	router.Run("localhost:8080")
 }
+
+
+func tmpMusic(c * gin.Context){
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Failed to load env vars",err)
+	}
+	ctx := 	context.Background() 
+	yts, err := youtube.NewService(ctx,option.WithAPIKey(os.Getenv("YOUTUBE_API_KEY")))
+
+	tmp := []string {"snippet,contentDetails,statistics"}
+
+	videoID := "DzFlPk2UnQg"
+
+    // Request video details
+    call := yts.Videos.List(tmp).Id(videoID)
+
+	res, err := call.Do()
+	if err != nil {
+		log.Fatal("Failed to search",err)
+	}
+
+
+	musicDescription := res.Items[0].Snippet.Localized.Description
+	pokemonMusicDescriptions :=pokemonServiceHelper.HelperDescription(musicDescription)
+	musicId := res.Items[0].Id
+	type Musica struct {
+		MusicDescription []types.YoutubeMusic `json:"musicDescription"`
+		MusicId string `json:"musicId"`
+	}
+	 tmpMusica :=  Musica{
+		MusicDescription: pokemonMusicDescriptions,
+		MusicId: musicId,
+	}
+
+	c.IndentedJSON(http.StatusOK, tmpMusica)
+}
+
+
+
+
 
 func getAllPokemons(c *gin.Context) {
 	pokemons, err := pokemonService.GetAllPokemons()
