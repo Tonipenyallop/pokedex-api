@@ -2,14 +2,17 @@ package pokemonService
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"time"
 
+	"github.com/Tonipenyallop/pokedex-api/constants"
 	pokemonServiceHelper "github.com/Tonipenyallop/pokedex-api/helpers"
 	pokemonRepository "github.com/Tonipenyallop/pokedex-api/repository"
 	"github.com/Tonipenyallop/pokedex-api/types"
 	"github.com/patrickmn/go-cache"
+	"google.golang.org/api/youtube/v3"
 )
 
 const POKEMON_CACHE_KEY = "pokemons"
@@ -45,7 +48,7 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 	cachedGenPokemons := pokemonServiceHelper.GetPokemonsFromCacheByGen(genId, pokemonCache)
 
 	if cachedGenPokemons != nil {
-		return cachedGenPokemons, nil
+		return *cachedGenPokemons, nil
 	}
 
 	// Check cache for all pokemons
@@ -65,7 +68,7 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 	// Fetch from repository
 	pokemons, err := pokemonRepository.GetPokemonsByGen(genId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch pokemons by generation: %w", err)
+		return nil, fmt.Errorf("failed to fetch pokemons by generation: %v", err)
 	}
 
 	// Sort and cache
@@ -96,17 +99,19 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 func GetPokemonFlavorTextAndEvolutionChain(pokemonId string) (*types.SpeciesInfo, error) {
 	flavorText, err := pokemonRepository.GetPokemonFlavorTextAndEvolutionChain(pokemonId)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flavor text")
+		return nil, fmt.Errorf("failed to get flavor text:%v", err)
 	}
 
 	tmp, err := pokemonRepository.GetEvolutionChain(flavorText.EvolutionChain.URL)
 
+	// taesu here
+	// // create helper to get array of 3 pokemons
 	if err != nil {
-		return nil, fmt.Errorf("Failed to fetch evolution chain detail")
+		return nil, fmt.Errorf("failed to fetch evolution chain detail:%v", err)
 	}
 	fmt.Println("tmp", tmp)
 
-	// evolutionChain, err := pokemonRepository.GetEvolutionChainById(pokemonId)
+	// evolutionChain, err := pokemonRepository.GetEvolutionChainPokemonNames(pokemonId)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("Failed to get evolution chain")
 	// }
@@ -119,6 +124,9 @@ func GetPokemonFlavorTextAndEvolutionChain(pokemonId string) (*types.SpeciesInfo
 
 func GetPokemonDetail(pokemonId string) (*pokemonRepository.TmpPokemon, error) {
 	convertedPokemonId, err := strconv.Atoi(pokemonId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert pokemonId:%v", err)
+	}
 
 	// check gen cache first
 	genId := pokemonServiceHelper.GetGenIdByPokemonId(convertedPokemonId)
@@ -127,7 +135,7 @@ func GetPokemonDetail(pokemonId string) (*pokemonRepository.TmpPokemon, error) {
 	genPokemonsInCache := pokemonServiceHelper.GetPokemonsFromCacheByGen(genId, pokemonCache)
 
 	if genPokemonsInCache != nil {
-		for _, pokemonInCache := range genPokemonsInCache {
+		for _, pokemonInCache := range *genPokemonsInCache {
 			if pokemonInCache.ID == convertedPokemonId {
 				pokemon := pokemonRepository.TmpPokemon(pokemonInCache)
 				fmt.Println("pokemon found it!", pokemon)
@@ -140,7 +148,6 @@ func GetPokemonDetail(pokemonId string) (*pokemonRepository.TmpPokemon, error) {
 	// check all gen cache
 	allPokemonsInCache := pokemonServiceHelper.GetAllPokemonsFromCache(pokemonCache)
 
-	
 	if allPokemonsInCache != nil {
 		for _, pokemonInCache := range allPokemonsInCache {
 			if pokemonInCache.ID == convertedPokemonId {
@@ -153,9 +160,44 @@ func GetPokemonDetail(pokemonId string) (*pokemonRepository.TmpPokemon, error) {
 	pokemon, err := pokemonRepository.GetPokemonDetail(pokemonId)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get pokemon detail", err)
+		return nil, fmt.Errorf("failed to get pokemon detail %v", err)
 	}
 
 	return pokemon, nil
 
+}
+
+func GetYoutubePlayList(youtubeService *youtube.Service) (*youtube.PlaylistItemListResponse, error) {
+	partList := []string{"snippet,contentDetails"}
+
+	playlistId := os.Getenv("PLAYLIST_ID")
+	// assumes the playlist is 15 length
+	call := youtubeService.PlaylistItems.List(partList).PlaylistId(playlistId).MaxResults(constants.MAX_PLAYLIST_COUNT)
+	res, err := call.Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to search:%v", err)
+	}
+	return res, nil
+
+}
+
+func GetYoutubeDescriptionById(youtubeService *youtube.Service, videoId string) (*types.GetYoutubeDescriptionByIdResponse, error) {
+	call := youtubeService.Videos.List([]string{"snippet"}).Id(videoId)
+
+	res, err := call.Do()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch video by videoId:%v", err)
+	}
+
+	musicDescription := res.Items[0].Snippet.Localized.Description
+	pokemonMusicDescriptions := pokemonServiceHelper.HelperDescription(musicDescription)
+	musicId := res.Items[0].Id
+
+	output := types.GetYoutubeDescriptionByIdResponse{
+		MusicDescription: pokemonMusicDescriptions,
+		MusicId:          musicId,
+	}
+
+	return &output, nil
 }
