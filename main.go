@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+	"strconv"
 
-	pokemonServiceHelper "github.com/Tonipenyallop/pokedex-api/helpers"
 	pokemonService "github.com/Tonipenyallop/pokedex-api/services"
-	"github.com/Tonipenyallop/pokedex-api/types"
 
 	"context"
 
@@ -36,52 +34,47 @@ func main() {
 	router.GET("/pokemon/gen/:generationId", getPokemonsByGen)
 	// router.GET("/pokemon/evolution-chain/:pokemonId", getEvolutionChainById)
 	router.GET("/pokemon/evolution-chain/:pokemonId", getPokemonFlavorTextAndEvolutionChain)
-	router.GET("/pokemon/music", tmpMusic)
+	router.GET("/pokemon/music/:musicIndex", getMusicDescriptions)
 
 	// Start the server
 	router.Run("localhost:8080")
 }
 
-
-func tmpMusic(c * gin.Context){
+func getMusicDescriptions(c *gin.Context) {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Failed to load env vars",err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to load env vars: %v", err)})
 	}
-	ctx := 	context.Background() 
-	yts, err := youtube.NewService(ctx,option.WithAPIKey(os.Getenv("YOUTUBE_API_KEY")))
+	musicIndex, found := c.Params.Get("musicIndex")
+	if !found {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "failed to get musicIndex from parameter"})
+	}
 
-	tmp := []string {"snippet,contentDetails,statistics"}
-
-	videoID := "DzFlPk2UnQg"
-
-    // Request video details
-    call := yts.Videos.List(tmp).Id(videoID)
-
-	res, err := call.Do()
+	convertedIndex, err := strconv.Atoi(musicIndex)
 	if err != nil {
-		log.Fatal("Failed to search",err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to convert musicIndex: %v", musicIndex)})
 	}
 
-
-	musicDescription := res.Items[0].Snippet.Localized.Description
-	pokemonMusicDescriptions :=pokemonServiceHelper.HelperDescription(musicDescription)
-	musicId := res.Items[0].Id
-	type Musica struct {
-		MusicDescription []types.YoutubeMusic `json:"musicDescription"`
-		MusicId string `json:"musicId"`
-	}
-	 tmpMusica :=  Musica{
-		MusicDescription: pokemonMusicDescriptions,
-		MusicId: musicId,
+	ctx := context.Background()
+	youtubeService, err := youtube.NewService(ctx, option.WithAPIKey(os.Getenv("YOUTUBE_API_KEY")))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to initiate new youtube service: %v", err)})
 	}
 
-	c.IndentedJSON(http.StatusOK, tmpMusica)
+	playlist, err := pokemonService.GetYoutubePlayList(youtubeService)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to fetch youtube playlist: %s", err)})
+	}
+
+	videoId := playlist.Items[convertedIndex].Snippet.ResourceId.VideoId
+
+	description, err := pokemonService.GetYoutubeDescriptionById(youtubeService, videoId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to get youtube description by id: %v", err)})
+	}
+	c.IndentedJSON(http.StatusOK, description)
 }
-
-
-
-
 
 func getAllPokemons(c *gin.Context) {
 	pokemons, err := pokemonService.GetAllPokemons()
