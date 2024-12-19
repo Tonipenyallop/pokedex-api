@@ -12,7 +12,6 @@ import (
 
 const POKEMON_CACHE_KEY = "pokemons"
 
-
 func GetPokemonsFromCacheByGen(genId string, pokemonCache *cache.Cache) []pokemonRepository.TmpPokemon {
 	genCacheKey := GetGenCacheKey(genId)
 
@@ -25,8 +24,7 @@ func GetPokemonsFromCacheByGen(genId string, pokemonCache *cache.Cache) []pokemo
 	return nil
 }
 
-
-func GetAllPokemonsFromCache(pokemonCache*cache.Cache) []pokemonRepository.TmpPokemon {
+func GetAllPokemonsFromCache(pokemonCache *cache.Cache) []pokemonRepository.TmpPokemon {
 	pokemonInCache, found := pokemonCache.Get(POKEMON_CACHE_KEY)
 	if found {
 		if cachedPokemon, ok := pokemonInCache.([]pokemonRepository.TmpPokemon); ok {
@@ -36,15 +34,12 @@ func GetAllPokemonsFromCache(pokemonCache*cache.Cache) []pokemonRepository.TmpPo
 	return nil
 }
 
-
-
-
-func GetGenCacheKey(genId string)string{
+func GetGenCacheKey(genId string) string {
 	return fmt.Sprintf("%s%s%s", POKEMON_CACHE_KEY, '_', genId)
 }
 
-func GetGenIdByPokemonId(pokemonId int) string{
-	
+func GetGenIdByPokemonId(pokemonId int) string {
+
 	if 1 <= pokemonId && pokemonId <= 151 {
 		return "first"
 	}
@@ -72,23 +67,19 @@ func GetGenIdByPokemonId(pokemonId int) string{
 	if 906 <= pokemonId && pokemonId <= 1025 {
 		return "ninth"
 	}
-	
-	return 	""
-		
+
+	return ""
+
 }
 
-
-
-func GetEvolutionChainPokemonNames(evolutionChain *types.EvolutionChain)[]string{
+func GetEvolutionChainPokemonNames(evolutionChain *types.EvolutionChain) []string {
 
 	var output []string
-	output = append(output,evolutionChain.Chain.Species.Name) 
-
-	
+	output = append(output, evolutionChain.Chain.Species.Name)
 
 	var queue []types.Chain
-	
-	for _, pokemon := range evolutionChain.Chain.EvolvesTo{
+
+	for _, pokemon := range evolutionChain.Chain.EvolvesTo {
 		output = append(output, pokemon.Species.Name)
 		queue = append(queue, pokemon.EvolvesTo...)
 	}
@@ -96,18 +87,11 @@ func GetEvolutionChainPokemonNames(evolutionChain *types.EvolutionChain)[]string
 
 	// }
 
-
-
-	return  output
+	return output
 }
 
-
-func HelperDescription(s string)[]types.YoutubeMusic{
-	
-
-	output := make([]types.YoutubeMusic,106)
-	// for array index
-	counter := 0
+func HelperDescription(s string) []types.YoutubeMusic {
+	output := []types.YoutubeMusic{}
 	lines := strings.Split(s, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -131,13 +115,18 @@ func HelperDescription(s string)[]types.YoutubeMusic{
 
 		// Time is last field
 		time := fields[len(fields)-1]
+
+		// removes 1st gen EN doesn't have time "43 Final Battle! (Rival)"
+		contains := strings.Contains(time, ":")
+		if !contains {
+			continue
+		}
+
 		// The title is everything between the first and last
 		title := strings.Join(fields[1:len(fields)-1], " ")
 
-		songName := fmt.Sprintf("%s %s",fields[0],title)
-		output[counter].Name = songName
-		output[counter].StartTime = time
-		counter ++
+		songName := fmt.Sprintf("%s %s", fields[0], title)
+		output = append(output, types.YoutubeMusic{Name: songName, StartTime: time})
 	}
 	return output
 }
