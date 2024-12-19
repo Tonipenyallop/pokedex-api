@@ -12,13 +12,13 @@ import (
 
 const POKEMON_CACHE_KEY = "pokemons"
 
-func GetPokemonsFromCacheByGen(genId string, pokemonCache *cache.Cache) []pokemonRepository.TmpPokemon {
+func GetPokemonsFromCacheByGen(genId string, pokemonCache *cache.Cache) *[]pokemonRepository.TmpPokemon {
 	genCacheKey := GetGenCacheKey(genId)
 
 	pokemonInCache, found := pokemonCache.Get(genCacheKey)
 	if found {
 		if cachedPokemon, ok := pokemonInCache.([]pokemonRepository.TmpPokemon); ok {
-			return cachedPokemon
+			return &cachedPokemon
 		}
 	}
 	return nil
