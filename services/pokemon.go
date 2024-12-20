@@ -83,20 +83,9 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 	return pokemons, nil
 }
 
-// func GetEvolutionChainById(pokemonId string) (*types.EvolutionChain, error) {
 
-// 	evolutionChain, err := pokemonRepository.GetEvolutionChainById(pokemonId)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("Failed to get evolution chain")
-// 	}
 
-// 	return evolutionChain, nil
-
-// }
-
-// get flavor text and evolution_chain
-
-func GetPokemonFlavorTextAndEvolutionChain(pokemonId string) (*types.SpeciesInfo, error) {
+func GetPokemonFlavorTextAndEvolutionChain(pokemonId string) (*types.GetPokemonFlavorTextAndEvolutionChainResponse, error) {
 	flavorText, err := pokemonRepository.GetPokemonFlavorTextAndEvolutionChain(pokemonId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get flavor text:%v", err)
@@ -104,21 +93,27 @@ func GetPokemonFlavorTextAndEvolutionChain(pokemonId string) (*types.SpeciesInfo
 
 	tmp, err := pokemonRepository.GetEvolutionChain(flavorText.EvolutionChain.URL)
 
-	// taesu here
-	// // create helper to get array of 3 pokemons
+
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch evolution chain detail:%v", err)
 	}
 	fmt.Println("tmp", tmp)
 
-	// evolutionChain, err := pokemonRepository.GetEvolutionChainPokemonNames(pokemonId)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("Failed to get evolution chain")
-	// }
 
-	// [types.SpeciesInfo, ]
+	 pokemonSprite, err := GetPokemonFrontSprite(*tmp)
+	 if err != nil {
+		return nil, fmt.Errorf("failed to get pokemon sprite:%v",err)
+	 }
+	
 
-	return flavorText, nil
+	output := types.GetPokemonFlavorTextAndEvolutionChainResponse{
+		FlavorText : flavorText,
+		EvolutionChain : &pokemonSprite,
+	}
+
+
+	return &output, nil
 
 }
 
@@ -200,4 +195,27 @@ func GetYoutubeDescriptionById(youtubeService *youtube.Service, videoId string) 
 	}
 
 	return &output, nil
+}
+
+// helper
+func GetPokemonFrontSprite(pokemonIds []int)([]types.GetPokemonFrontSpriteResponse, error){
+	output := []types.GetPokemonFrontSpriteResponse{}
+
+	for _, pokemonId := range pokemonIds{
+		convId := strconv.Itoa(pokemonId)
+		pokemonDetail, err := GetPokemonDetail(convId)
+		if err != nil {
+			return nil, fmt.Errorf("failed get pokemon detail:%v",err)
+		}
+
+		item := types.GetPokemonFrontSpriteResponse{
+			Name: pokemonDetail.Name,
+			SpriteFront: pokemonDetail.Sprites.FrontDefault,
+		}
+
+		output = append(output, item)
+	}
+
+	return output, nil
+
 }
