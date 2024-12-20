@@ -79,6 +79,9 @@ type GetAllPokemonsResponse struct {
 
 type GenID string
 
+
+
+
 type EvolutionChain struct {
 	BabyTriggerItem interface{} `json:"baby_trigger_item"`
 	Chain           Chain       `json:"chain"`
@@ -222,4 +225,15 @@ type YoutubeMusic struct {
 type GetYoutubeDescriptionByIdResponse struct {
 	MusicDescription []YoutubeMusic `json:"musicDescription"`
 	MusicId          string         `json:"musicId"`
+}
+
+
+type GetPokemonFlavorTextAndEvolutionChainResponse struct {
+	FlavorText *SpeciesInfo `json:"flavorText"`
+	EvolutionChain *[]GetPokemonFrontSpriteResponse `json:"evolutionChain"`
+}
+
+type GetPokemonFrontSpriteResponse struct {
+	Name string `json:"name"`
+		SpriteFront string `json:"spriteFront"`
 }
