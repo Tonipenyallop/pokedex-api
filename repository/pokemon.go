@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	pokemonDynamo "github.com/Tonipenyallop/pokedex-api/database/dynamo"
 	"github.com/Tonipenyallop/pokedex-api/types"
@@ -165,7 +166,7 @@ type RevolutionChain struct {
 
 // get from pokemon species
 // seems like an ID of endpoint is not corresponding to pokemon ID
-func GetEvolutionChain(url string)(*types.EvolutionChain, error){
+func GetEvolutionChain(url string)(*[]int, error){
 	// url := fmt.Sprintf("https://pokeapi.co/api/v2/evolution-chain/%s", pokemonId)
 	fmt.Println("url hehe",url)
 	res, err :=  http.Get(url)
@@ -190,21 +191,13 @@ func GetEvolutionChain(url string)(*types.EvolutionChain, error){
 		return nil, fmt.Errorf("failed to unmarshal body",err)
 	}
 
+	
 
-	// input is pokemon name 
-	// return up to 3 pokemons name
-
-	// tomp.chain.species.name -> baby pokemon
-	// tomp.chain.evolves_to[0].species.name -> keep going
+	var result []int
+	getIDsFromEvolutionChain(evolutionChain.Chain, &result)
 
 
-
-
-	// need to decode it
-
-	// fmt.Println("body",body)
-	// pokemons := []TmpPokemon{}
-	return &evolutionChain , nil
+	return &result , nil
 
 }
 
@@ -263,4 +256,25 @@ func GetPokemonDetail(pokemonId string)(*TmpPokemon, error){
 
 
 	return &pokemon, nil
+}
+
+// helper
+
+func extractID(url string) int {
+	parts := strings.Split(strings.TrimSuffix(url, "/"), "/")
+	id := parts[len(parts)-1]
+	parsedID := 0
+	fmt.Sscanf(id, "%d", &parsedID)
+	return parsedID
+}
+
+
+func getIDsFromEvolutionChain(chain types.Chain, result *[]int) {
+	*result = append(*result, 
+		  extractID(chain.Species.URL),
+	)
+
+	for _, nextChain := range chain.EvolvesTo {
+		getIDsFromEvolutionChain(nextChain, result)
+	}
 }
