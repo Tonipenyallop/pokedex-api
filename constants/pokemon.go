@@ -12,4 +12,4 @@ var GENERATION_MAP = map[string][2]int{
 	"ninth": {906, 1025},
 }
 
-const MAX_PLAYLIST_COUNT = 15
+const MAX_PLAYLIST_COUNT = 5
