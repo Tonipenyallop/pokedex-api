@@ -224,6 +224,16 @@ func GetPokemonFlavorTextAndEvolutionChain(pokemonId string)(*types.SpeciesInfo,
 
 	err = json.Unmarshal(body,&speciesInfo)
 
+	// only english, korean japanese
+	var filteredEntries []types.FlavorText
+	for _, flavorText := range speciesInfo.FlavorTextEntries {
+		if (flavorText.Language.Name == "en" || flavorText.Language.Name == "ko" || flavorText.Language.Name == "ja"){
+				fmt.Println("flavorText.Language.Name",flavorText.Language.Name)
+				filteredEntries = append(filteredEntries, flavorText)
+		}
+	}
+	speciesInfo.FlavorTextEntries = filteredEntries
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal body",err)
 	}
