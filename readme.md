@@ -80,3 +80,12 @@ aws_secret_access_key = ACCOUNT2_SECRET_KEY
 ```
 Error writing batch: ValidationException: Item size has exceeded the maximum allowed size
 ```
+
+### Debugging configuration
+
+- **${workspaceFolder}**: Represents the root folder of your workspace—the folder you opened in VS Code.
+
+```
+"program": "${workspaceFolder}",
+
+```
