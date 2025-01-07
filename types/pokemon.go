@@ -234,6 +234,7 @@ type GetPokemonFlavorTextAndEvolutionChainResponse struct {
 }
 
 type GetPokemonFrontSpriteResponse struct {
+	Id int `json:"id"`
 	Name string `json:"name"`
-		SpriteFront string `json:"spriteFront"`
+	SpriteFront string `json:"spriteFront"`
 }

@@ -209,6 +209,7 @@ func GetPokemonFrontSprite(pokemonIds []int)([]types.GetPokemonFrontSpriteRespon
 		}
 
 		item := types.GetPokemonFrontSpriteResponse{
+			Id : pokemonId,
 			Name: pokemonDetail.Name,
 			SpriteFront: pokemonDetail.Sprites.FrontDefault,
 		}

@@ -121,24 +121,6 @@ func getPokemonsByGen(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, pokemons)
 }
 
-// this method will return up to 3 pokemons of array
-// func getEvolutionChainById(c *gin.Context){
-// 	pokemonId, found := c.Params.Get("pokemonId")
-
-// 	if !found {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error" : "pokemonId param is required"})
-// 	}
-
-// 	evolutionChain, err := pokemonService.GetEvolutionChainById(pokemonId)
-
-// 	if err != nil {
-// 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error" : fmt.Sprint("failed to get evolution chain with id:%s %s",pokemonId,err)})
-// 	}
-
-// 	c.IndentedJSON(http.StatusOK, evolutionChain)
-
-// }
-
 func getPokemonFlavorTextAndEvolutionChain(c *gin.Context) {
 	pokemonId, found := c.Params.Get("pokemonId")
 
