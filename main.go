@@ -23,7 +23,7 @@ func main() {
 
 	// Cors setting
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:5173"},
+		AllowOrigins: []string{"*"},
 		AllowMethods: []string{"GET", "POST"},
 		AllowHeaders: []string{"Origin", "Content-type", "Authorization"},
 	}))
@@ -37,7 +37,7 @@ func main() {
 	router.GET("/pokemon/music/:musicIndex", getMusicDescriptions)
 
 	// Start the server
-	router.Run("localhost:8080")
+	router.Run(":8080")
 }
 
 func getMusicDescriptions(c *gin.Context) {
