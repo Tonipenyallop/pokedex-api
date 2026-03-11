@@ -14,11 +14,16 @@ func GetDynamo() (*dynamodb.DynamoDB, error) {
 
 	godotenv.Load() // optional: env vars may come from container env
 
-	awsRegion := os.Getenv("AWS_REGION")
+	
+	cfg := &aws.Config{
+		Region: aws.String(os.Getenv("AWS_REGION")),
+	}
 
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(awsRegion),
-	})
+	if endpoint := os.Getenv("DYNAMO_ENDPOINT"); endpoint != "" {
+		cfg.Endpoint = aws.String(endpoint)
+	}
+
+	sess, err := session.NewSession(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create AWS session: %w", err)
 	}
