@@ -11,7 +11,6 @@ FROM alpine:latest
 WORKDIR /app
 
 COPY --from=builder /app/docker-pokedex-api .
-COPY .env .
 
 EXPOSE 8080
 CMD ["./docker-pokedex-api"]
