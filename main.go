@@ -21,7 +21,7 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
-	// Cors setting
+	// CORS setting
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{"GET", "POST"},
@@ -29,22 +29,21 @@ func main() {
 	}))
 
 	// Define routes
-	router.GET("/pokemon/all", getAllPokemons)
-	router.GET("/pokemon/:pokemonId", getPokemonDetails)
-	router.GET("/pokemon/gen/:generationId", getPokemonsByGen)
-	// router.GET("/pokemon/evolution-chain/:pokemonId", getEvolutionChainById)
-	router.GET("/pokemon/evolution-chain/:pokemonId", getPokemonFlavorTextAndEvolutionChain)
-	router.GET("/pokemon/music/:musicIndex", getMusicDescriptions)
+	pokemon := router.Group("/pokemon")
+	{
+		pokemon.GET("/all", getAllPokemons)
+		pokemon.GET("/gen/:generationId", getPokemonsByGen)
+		pokemon.GET("/evolution-chain/:pokemonId", getPokemonFlavorTextAndEvolutionChain)
+		pokemon.GET("/music/:musicIndex", getMusicDescriptions)
+		pokemon.GET("/:pokemonId", getPokemonDetails) // wildcard last to avoid conflicts
+	}
 
 	// Start the server
 	router.Run(":8080")
 }
 
 func getMusicDescriptions(c *gin.Context) {
-	err := godotenv.Load()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to load env vars: %v", err)})
-	}
+	godotenv.Load() // optional: env vars may come from container env
 	musicIndex, found := c.Params.Get("musicIndex")
 	if !found {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "failed to get musicIndex from parameter"})
@@ -52,13 +51,13 @@ func getMusicDescriptions(c *gin.Context) {
 
 	convertedIndex, err := strconv.Atoi(musicIndex)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to convert musicIndex: %v", musicIndex)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Errorf("failed to convert musicIndex: %v", musicIndex)})
 	}
 
 	ctx := context.Background()
 	youtubeService, err := youtube.NewService(ctx, option.WithAPIKey(os.Getenv("YOUTUBE_API_KEY")))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to initiate new youtube service: %v", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Errorf("failed to initiate new youtube service: %v", err)})
 	}
 
 	playlist, err := pokemonService.GetYoutubePlayList(youtubeService)
@@ -71,7 +70,7 @@ func getMusicDescriptions(c *gin.Context) {
 
 	description, err := pokemonService.GetYoutubeDescriptionById(youtubeService, videoId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error":fmt.Errorf("failed to get youtube description by id: %v", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Errorf("failed to get youtube description by id: %v", err)})
 	}
 	c.IndentedJSON(http.StatusOK, description)
 }

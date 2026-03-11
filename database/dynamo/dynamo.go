@@ -12,10 +12,7 @@ import (
 
 func GetDynamo() (*dynamodb.DynamoDB, error) {
 
-	err := godotenv.Load()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to load env vars:", err)
-	}
+	godotenv.Load() // optional: env vars may come from container env
 
 	awsRegion := os.Getenv("AWS_REGION")
 
