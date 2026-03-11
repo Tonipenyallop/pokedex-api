@@ -35,7 +35,7 @@ func GetAllPokemonsFromCache(pokemonCache *cache.Cache) []pokemonRepository.TmpP
 }
 
 func GetGenCacheKey(genId string) string {
-	return fmt.Sprintf("%s%s%s", POKEMON_CACHE_KEY, '_', genId)
+	return fmt.Sprintf("%s_%s", POKEMON_CACHE_KEY, genId)
 }
 
 func GetGenIdByPokemonId(pokemonId int) string {

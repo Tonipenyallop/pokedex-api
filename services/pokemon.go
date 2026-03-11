@@ -62,6 +62,9 @@ func GetPokemonsByGen(genId string) ([]pokemonRepository.TmpPokemon, error) {
 				pokemonArr = append(pokemonArr, pokemon)
 			}
 		}
+		
+		genCacheKey := pokemonServiceHelper.GetGenCacheKey(genId)
+		pokemonCache.Set(genCacheKey, pokemonArr, 24*time.Hour)
 		return pokemonArr, nil
 	}
 
